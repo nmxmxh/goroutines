@@ -3,50 +3,60 @@ package main
 import (
 	"fmt"
 	"sync"
-	"time"
-)
-
-var (
-	counter = 0
-	mutex   sync.Mutex
-	cond    = sync.NewCond(&mutex)
 )
 
 func main() {
-	go producer()
-	go consumer()
+	var count int
+	var mu sync.Mutex
+	var waitGroup sync.WaitGroup
 
-	time.Sleep(5 * time.Second)
-}
+	itrs := 100000
+	// waitGroup.Add(itrs)
 
-func producer() {
-	for {
-		mutex.Lock()
-		if counter > 0 {
-			cond.Wait()
+	// option 2. add individually.
+	waitGroup.Add(1)
+
+	go func() {
+		// option 2. defer waitgroup done @ beginning.
+		defer waitGroup.Done()
+		for i := 0; i < itrs; i++ {
+			waitGroup.Add(1)
+			go func() {
+				// option 1.
+				defer waitGroup.Done()
+				mu.Lock()
+				count++
+				mu.Unlock()
+
+			}()
 		}
+		fmt.Print("first routine done.\n")
+	}()
 
-		time.Sleep(time.Second)
-		counter++
-		fmt.Printf("increasing counter: %v\n", counter)
+	altItrs := 1000
+	// option 1.
+	// waitGroup.Add(altItrs)
 
-		mutex.Unlock()
-		cond.Signal()
-	}
-}
+	// option 2. add individually.
+	waitGroup.Add(1)
 
-func consumer() {
-	for {
-		mutex.Lock()
-		if counter == 0 {
-			cond.Wait()
+	go func() {
+		defer waitGroup.Done()
+		for i := 0; i < altItrs; i++ {
+			waitGroup.Add(1)
+			go func() {
+				// option 2. put at beginning.
+				defer waitGroup.Done()
+				mu.Lock()
+				count++
+				mu.Unlock()
+				// option 1.
+				// waitGroup.Done()
+			}()
 		}
+		fmt.Print("second routine done.\n")
+	}()
 
-		time.Sleep(time.Second)
-		counter--
-		fmt.Printf("decreasing counter: %v\n", counter)
-
-		mutex.Unlock()
-		cond.Signal()
-	}
+	waitGroup.Wait()
+	fmt.Println(count)
 }
