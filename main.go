@@ -2,41 +2,43 @@ package main
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
 func main() {
-	go printMessage("print routine 1")
-	go printMessage("print routine 2")
-	go printMessage("print routine 3")
-	go printMessage("print routine 4")
-
 	// 1.
-	// main goroutine. MAIN THREAD.
-	// main thread initially not allowing others to execute.
-	// added time sleep
-	printMessage("print routine 5")
+	// create a go routine
+	// change a variable inside it.
+	// ! incorrect value shown
+	// goroutine didn't have time to finish before the program finishes.
+	// add sleep
+	var count int
 
 	// 4.
-	// new function before sleep.
-	// anonymous function synthax.
-	// ! no control over order
-	go func() {
-		fmt.Println("print anonymous func routine")
-	}()
+	// let's solve that using mutex.
+	var mu sync.Mutex
 
 	// 2.
-	// time sleep
-	// sleeping for one second
-	// enough to execute other go routines.
-	time.Sleep(time.Second)
-}
+	// create new routines, loop.
+	// ! different problem, random
+	// not a problem of waiting.
+	for i := 0; i < 1000; i++ {
+		go func() {
+			// 3.
+			// print inside the goroutine.
+			// ! a lot of goroutines changing variable at the same time.
 
-func printMessage(msg string) {
-	// 3.
-	// iterating five times.
-	for i := 0; i < 5; i++ {
-		fmt.Println(msg)
+			// 5.
+			// lock and unlock in the function.
+			// we will have order now.
+			mu.Lock()
+			defer mu.Unlock()
+			fmt.Println(count)
+			count++
+		}()
 	}
 
+	time.Sleep(time.Second)
+	fmt.Println(count)
 }
