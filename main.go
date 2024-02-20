@@ -6,39 +6,47 @@ import (
 	"time"
 )
 
+var (
+	counter = 0
+	mutex   sync.Mutex
+	cond    = sync.NewCond(&mutex)
+)
+
 func main() {
-	// 1.
-	// create a go routine
-	// change a variable inside it.
-	// ! incorrect value shown
-	// goroutine didn't have time to finish before the program finishes.
-	// add sleep
-	var count int
+	go producer()
+	go consumer()
 
-	// 4.
-	// let's solve that using mutex.
-	var mu sync.Mutex
+	time.Sleep(5 * time.Second)
+}
 
-	// 2.
-	// create new routines, loop.
-	// ! different problem, random
-	// not a problem of waiting.
-	for i := 0; i < 1000; i++ {
-		go func() {
-			// 3.
-			// print inside the goroutine.
-			// ! a lot of goroutines changing variable at the same time.
+func producer() {
+	for {
+		mutex.Lock()
+		if counter > 0 {
+			cond.Wait()
+		}
 
-			// 5.
-			// lock and unlock in the function.
-			// we will have order now.
-			mu.Lock()
-			defer mu.Unlock()
-			fmt.Println(count)
-			count++
-		}()
+		time.Sleep(time.Second)
+		counter++
+		fmt.Printf("increasing counter: %v\n", counter)
+
+		mutex.Unlock()
+		cond.Signal()
 	}
+}
 
-	time.Sleep(time.Second)
-	fmt.Println(count)
+func consumer() {
+	for {
+		mutex.Lock()
+		if counter == 0 {
+			cond.Wait()
+		}
+
+		time.Sleep(time.Second)
+		counter--
+		fmt.Printf("decreasing counter: %v\n", counter)
+
+		mutex.Unlock()
+		cond.Signal()
+	}
 }
