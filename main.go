@@ -3,60 +3,50 @@ package main
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 )
 
+type Person struct {
+	Name string
+	Age  int32
+}
+
 func main() {
-	var count int
-	var mu sync.Mutex
+	// option 1
+	// var count int32
+
+	// option 2
+	// var count atomic.Int32
 	var waitGroup sync.WaitGroup
+	var person atomic.Value
 
-	itrs := 100000
-	// waitGroup.Add(itrs)
+	person.Store(&Person{Name: "Nobert", Age: 28})
 
-	// option 2. add individually.
-	waitGroup.Add(1)
+	for i := 0; i < 10; i++ {
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			// option 1
+			// atomic.AddInt32(&count, 1)
 
-	go func() {
-		// option 2. defer waitgroup done @ beginning.
-		defer waitGroup.Done()
-		for i := 0; i < itrs; i++ {
-			waitGroup.Add(1)
-			go func() {
-				// option 1.
-				defer waitGroup.Done()
-				mu.Lock()
-				count++
-				mu.Unlock()
+			// option 2
+			// count.Add(1)
 
-			}()
-		}
-		fmt.Print("first routine done.\n")
-	}()
-
-	altItrs := 1000
-	// option 1.
-	// waitGroup.Add(altItrs)
-
-	// option 2. add individually.
-	waitGroup.Add(1)
-
-	go func() {
-		defer waitGroup.Done()
-		for i := 0; i < altItrs; i++ {
-			waitGroup.Add(1)
-			go func() {
-				// option 2. put at beginning.
-				defer waitGroup.Done()
-				mu.Lock()
-				count++
-				mu.Unlock()
-				// option 1.
-				// waitGroup.Done()
-			}()
-		}
-		fmt.Print("second routine done.\n")
-	}()
+			// using values, load person into variable
+			// atomic operations? pointers!
+			// .(*Person), cast to person.
+			altPerson := person.Load().(*Person)
+			atomic.AddInt32(&altPerson.Age, 1)
+		}()
+	}
 
 	waitGroup.Wait()
-	fmt.Println(count)
+	// option 1
+	// fmt.Println(atomic.LoadInt32(&count))
+
+	// option 2
+	// fmt.Println(count.Load())
+
+	// use atomic operations, load atomic values & cast
+	fmt.Println(person.Load().(*Person))
 }
