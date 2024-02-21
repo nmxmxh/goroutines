@@ -1,18 +1,19 @@
 package main
 
-import (
-	"fmt"
-	"time"
-)
+import "fmt"
 
 func main() {
-	done := make(chan bool)
+	// add size (1) to buffer.
+	channel := make(chan string, 1)
 
-	go func() {
-		time.Sleep(2 * time.Second)
-		done <- true
-	}()
+	// send a message to channel.
+	// blocking thread.
+	// in this case, main thread.
+	channel <- "message"
 
-	<-done
-	fmt.Printf("main thread unblocked")
+	// ? add another message
+	// ! channel is full
+	channel <- "another message"
+
+	fmt.Println(<-channel)
 }
