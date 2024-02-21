@@ -2,32 +2,24 @@ package main
 
 import (
 	"fmt"
-	"sync"
-	"sync/atomic"
+	"time"
 )
 
-type DBConnection struct {
-	index int64
-}
-
 func main() {
-	var count int64
-	connectionPool := &sync.Pool{
-		New: func() any {
-			atomic.AddInt64(&count, 1)
-			return &DBConnection{
-				index: count,
-			}
-		},
-	}
+	// create an unbuffered channel.
+	channel := make(chan string)
 
-	for i := 0; i < 10; i++ {
-		go func() {
-			dbConn := connectionPool.Get().(*DBConnection)
-			fmt.Printf("db connection: %v\n", dbConn)
-			connectionPool.Put(dbConn)
-		}()
-	}
+	// sender goroutine function.
+	go func() {
+		time.Sleep(5 * time.Second)
+		channel <- "message"
+	}()
+
+	// receiver goroutine function.
+	go func() {
+		message := <-channel
+		fmt.Printf("message: %v", message)
+	}()
 
 	fmt.Scanln()
 }
