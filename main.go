@@ -3,54 +3,46 @@ package main
 import (
 	"fmt"
 	"sync"
+	"time"
 )
 
-// solution two with mutex
+var (
+	counter   = 0
+	mutex     sync.Mutex
+	condition = sync.NewCond(&mutex)
+)
+
 func main() {
-	var data int
-	var mutex sync.Mutex
+	go producer()
+	go consumer()
 
-	go func() {
-		mutex.Lock()
-		defer mutex.Unlock()
-		data = 64
-	}()
-
-	go func() {
-		mutex.Lock()
-		defer mutex.Unlock()
-		fmt.Println(data)
-	}()
-
-	fmt.Scanln()
+	time.Sleep(5 * time.Second)
 }
 
-// solution one with atomic operations
-// func main() {
-// 	var data atomic.Int64
+func producer() {
+	for {
+		mutex.Lock()
+		if counter > 0 {
+			condition.Wait()
+		}
+		time.Sleep(1 * time.Second)
+		counter++
+		fmt.Printf("incrementing %v \n", counter)
+		mutex.Unlock()
+		condition.Signal()
+	}
+}
 
-// 	go func() {
-// 		data.Add(64)
-// 	}()
-
-// 	go func() {
-// 		fmt.Println(data.Load())
-// 	}()
-
-// 	fmt.Scanln()
-// }
-
-// initial with data block
-// func main() {
-// 	var data int
-
-// 	go func() {
-// 		data = 42
-// 	}()
-
-// 	go func() {
-// 		fmt.Println(data)
-// 	}()
-
-// 	fmt.Scanln()
-// }
+func consumer() {
+	for {
+		mutex.Lock()
+		if counter == 0 {
+			condition.Wait()
+		}
+		time.Sleep(1 * time.Second)
+		counter--
+		fmt.Printf("decrementing %v \n", counter)
+		mutex.Unlock()
+		condition.Signal()
+	}
+}
